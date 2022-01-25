@@ -9,6 +9,10 @@
 CRGB leds[NUM_LEDS];
 #define MAIN_LOOP 3
 #define EXP 1
+int MODE = 3;
+CRGB CURRENT_COLOR = CRGB::White;
+
+//update
 
 
 unsigned long main_timer = 0, hue_timer, strobe_timer, running_timer, color_timer, rainbow_timer, eeprom_timer;
@@ -75,8 +79,11 @@ void loop() {
   WiFiClient client = server.available();
   if(client){
   Serial.println("if c");
- 
-    while(client.available()){
+  if(client.connected())
+    {
+      Serial.println("Client Connected");
+    }
+    while(client.available()>0){
         char str = client.read();
         Serial.print(str);
         dataR[indexWrite] = str;
@@ -85,8 +92,7 @@ void loop() {
           readData(client);
           indexWrite = 0;
           }
-
-            }
+      }
         
       
     }
@@ -96,6 +102,7 @@ void loop() {
 //  FastLED.show(); 
  if (millis() - main_timer > MAIN_LOOP) {
   
+      if(MODE == 3){
    // сбрасываем значения
       RsoundLevel = 0;
         for (int i = 0; i < 50; i ++) {                                 // делаем 100 измерений
@@ -103,8 +110,12 @@ void loop() {
           if (RsoundLevel < RcurrentLevel) RsoundLevel = RcurrentLevel;   // ищем максимальное
         }
 
+          int check_max_level = 400;
+            if(RsoundLevel > check_max_level){
+              check_max_level = RsoundLevel +1;
+            }
         // фильтруем по нижнему порогу шумов
-        RsoundLevel = map(RsoundLevel, LOW_PASS, 400, 0, 500);
+        RsoundLevel = map(RsoundLevel, LOW_PASS, check_max_level, 0, 500);
         
 
         // ограничиваем диапазон
@@ -148,6 +159,15 @@ void loop() {
            leds[NUM_LEDS/2-1] = CHSV( map(RsoundLevel,0, 500, 200,300 ), 255, map(RsoundLevel,0, 500, 0,255 ));
           FastLED.show();
           main_timer = millis();
+          }else if(MODE == 1){
+            for(int i = NUM_LEDS; i >  0; i--){
+             //leds[i] =  ;
+              leds[i] = CURRENT_COLOR;
+
+          }
+                         FastLED.show();
+          main_timer = millis();
+          }
   }
     
 }
@@ -165,6 +185,60 @@ void readData(WiFiClient client){
     ){
       client.print("ok");
       Serial.println("send \"ok\"");
+      }
+      else{
+        int index_read = 0;
+        int step1 = dataR[0]- '0';
+        MODE = step1 *100;
+        step1 = dataR[1]- '0';
+        MODE += step1 *10;
+        step1 = dataR[2]- '0';
+        MODE += step1 *1;
+        index_read += 3;
+        if(dataR[index_read] == 'c'){
+          index_read +=1;
+          int value = 0;
+          int hue = 0;
+          int str = 0;
+          step1 = dataR[index_read+0]- '0';
+          value = step1 *100;
+          
+          step1 = dataR[index_read+1]- '0';
+          value += step1 *10;
+          
+          step1 = dataR[index_read+2]- '0';
+          value += step1 *1;
+          
+          index_read +=3;
+          
+          step1 = dataR[index_read+0]- '0';
+          hue = step1 *100;
+          
+          step1 = dataR[index_read+1]- '0';
+          hue += step1 *10;
+          
+          step1 = dataR[index_read+2]- '0';
+          hue += step1 *1;
+          
+          index_read +=3;
+
+          step1 = dataR[index_read+0]- '0';
+          str = step1 *100;
+          
+          step1 = dataR[index_read+1]- '0';
+          str += step1 *10;
+          
+          step1 = dataR[index_read+2]- '0';
+          str += step1 *1;
+          
+          index_read +=3;
+          
+          //CHSV( 224, 187, 255)
+          
+          CURRENT_COLOR = CRGB( hue, str, value);
+        }
+
+
       }
 
   
